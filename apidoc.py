@@ -674,8 +674,8 @@ class VariableDoc(APIDoc):
     def __init__(self, **kwargs):
         APIDoc.__init__(self, **kwargs)
         if self.is_public is UNKNOWN and self.name is not UNKNOWN:
-            self.is_public = (not self.name.startswith('_') or
-                              self.name.endswith('_'))
+            self.is_public = (not str(self.name).startswith('_') or
+                              str(self.name).endswith('_'))
         
     def __repr__(self):
         if self.canonical_name is not UNKNOWN:

@@ -17,9 +17,8 @@ __docformat__ = 'epytext en'
 ## Imports
 ##################################################
 
-import re, sys, os.path, string
-from xml.dom.minidom import Text as _Text
 from epydoc.apidoc import *
+import sys
 
 # The following methods may be undocumented:
 _NO_DOCS = ['__hash__', '__repr__', '__str__', '__cmp__']
