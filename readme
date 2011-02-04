@@ -1,0 +1,4 @@
+Epydoc is a (previously unmaintained) tool for generating API documentation for Python modules, 
+based on their docstrings.
+
+Epydoc understands docstrings written in reStructuredText, Javadoc, epytext and plaintext.
