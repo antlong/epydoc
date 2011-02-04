@@ -1,8 +1,10 @@
-# epydoc -- API Documentation Classes
-#
+# epydoc
+# API Documentation Classes
 # Copyright (C) 2005 Edward Loper
 # Author: Edward Loper <edloper@loper.org>
 # URL: <http://epydoc.sf.net>
+# Maintainer: Anthony Long <ant@antlong.com>
+# URL: <http://antlong.com>
 #
 # $Id: apidoc.py 1675 2008-01-29 17:12:56Z edloper $
 
@@ -38,17 +40,17 @@ __docformat__ = 'epytext en'
 ## Imports
 ######################################################################
 
-import types, re, os.path, pickle
+import types, re, os.path
 from epydoc import log
 import epydoc
 import __builtin__
-from epydoc.compat import * # Backwards compatibility
-from epydoc.util import decode_with_backslashreplace, py_src_filename
+from epydoc.util import py_src_filename
 import epydoc.markup.pyval_repr
 
 ######################################################################
 # Dotted Names
 ######################################################################
+
 
 class DottedName:
     """
@@ -80,8 +82,8 @@ class DottedName:
         """
 
     _ok_identifiers = set()
-    """A cache of identifier strings that have been checked against
-    _IDENTIFIER_RE and found to be acceptable."""
+    # A cache of identifier strings that have been checked against
+    # _IDENTIFIER_RE and found to be acceptable.
     
     def __init__(self, *pieces, **options):
         """
@@ -103,7 +105,7 @@ class DottedName:
         if the given name is invalid.
         """
         if len(pieces) == 1 and isinstance(pieces[0], tuple):
-            self._identifiers = pieces[0] # Optimization
+            self._identifiers = pieces[0]  # Optimization
             return
         if len(pieces) == 0:
             raise DottedName.InvalidDottedName('Empty DottedName')
@@ -129,7 +131,7 @@ class DottedName:
         self._identifiers = tuple(self._identifiers)
 
     def __repr__(self):
-        idents = [`ident` for ident in self._identifiers]
+        idents = [repr(ident) for ident in self._identifiers]
         return 'DottedName(' + ', '.join(idents) + ')'
 
     def __str__(self):
@@ -160,7 +162,7 @@ class DottedName:
         if isinstance(other, (basestring, DottedName)):
             return DottedName(other, self)
         else:
-            return DottedName(*(list(other)+[self]))
+            return DottedName(*(list(other) + [self]))
 
     def __getitem__(self, i):
         """
@@ -171,8 +173,10 @@ class DottedName:
         """
         if isinstance(i, types.SliceType):
             pieces = self._identifiers[i.start:i.stop]
-            if pieces: return DottedName(pieces)
-            else: return []
+            if pieces:
+                return DottedName(pieces)
+            else:
+                return []
         else:
             return self._identifiers[i]
 
@@ -254,7 +258,7 @@ class DottedName:
                 first_difference = i
                 break
         else:
-            first_difference = i+1
+            first_difference = i + 1
             
         # Strip off anything before that index.
         if first_difference == 0:
@@ -268,6 +272,7 @@ class DottedName:
 # UNKNOWN Value
 ######################################################################
 
+
 class _Sentinel:
     """
     A unique value that won't compare equal to any other value.  This
@@ -275,11 +280,14 @@ class _Sentinel:
     """
     def __init__(self, name):
         self.name = name
+    
     def __repr__(self):
         return '<%s>' % self.name
+    
     def __nonzero__(self):
         raise ValueError('Sentinel value <%s> can not be used as a boolean' %
                          self.name)
+    
 
 UNKNOWN = _Sentinel('UNKNOWN')
 """A special value used to indicate that a given piece of
@@ -289,6 +297,7 @@ default value for all instance variables."""
 ######################################################################
 # API Documentation Objects: Abstract Base Classes
 ######################################################################
+
 
 class APIDoc(object):
     """
@@ -369,7 +378,7 @@ class APIDoc(object):
     #} end of "information extracted from docstrings" group
 
     #{ Source Information
-    docs_extracted_by = UNKNOWN # 'parser' or 'introspecter' or 'both'
+    docs_extracted_by = UNKNOWN  # 'parser' or 'introspecter' or 'both'
     """@ivar: Information about where the information contained by this
        C{APIDoc} came from.  Can be one of C{'parser'},
        C{'introspector'}, or C{'both'}.
@@ -416,7 +425,7 @@ class APIDoc(object):
         __setattr__ = _debug_setattr
 
     def __repr__(self):
-       return '<%s>' % self.__class__.__name__
+        return '<%s>' % self.__class__.__name__
     
     def pp(self, doublespace=0, depth=5, exclude=(), include=()):
         """
@@ -448,18 +457,22 @@ class APIDoc(object):
         self.__init__(**self.__dict__)
 
     __has_been_hashed = False
-    """True iff L{self.__hash__()} has ever been called."""
+    # True iff L{self.__hash__()} has ever been called.
     
     def __hash__(self):
         self.__has_been_hashed = True
         return id(self.__dict__)
 
     def __cmp__(self, other):
-        if not isinstance(other, APIDoc): return -1
-        if self.__dict__ is other.__dict__: return 0
+        if not isinstance(other, APIDoc):
+            return -1
+        if self.__dict__ is other.__dict__:
+            return 0
         name_cmp = cmp(self.canonical_name, other.canonical_name)
-        if name_cmp == 0: return -1
-        else: return name_cmp
+        if name_cmp == 0:
+            return -1
+        else:
+            return name_cmp
 
     def is_detailed(self):
         """
@@ -502,7 +515,8 @@ class APIDoc(object):
         """
         # If we're already merged, then there's nothing to do.
         if (self.__dict__ is other.__dict__ and
-            self.__class__ is other.__class__): return self
+            self.__class__ is other.__class__):
+            return self
             
         if other.__has_been_hashed and not ignore_hash_conflict:
             raise ValueError("%r has already been hashed!  Merging it "
@@ -510,7 +524,7 @@ class APIDoc(object):
 
         # If other was itself already merged with anything,
         # then we need to merge those too.
-        a,b = (self.__mergeset, other.__mergeset)
+        a, b = (self.__mergeset, other.__mergeset)
         mergeset = (self.__mergeset or [self]) + (other.__mergeset or [other])
         other.__dict__.clear()
         for apidoc in mergeset:
@@ -549,6 +563,7 @@ class APIDoc(object):
         """
         return []
 
+
 def reachable_valdocs(root, **filters):
     """
     Return a list of all C{ValueDoc}s that can be reached, directly or
@@ -576,6 +591,7 @@ def reachable_valdocs(root, **filters):
 ######################################################################
 # Variable Documentation Objects
 ######################################################################
+
 
 class VariableDoc(APIDoc):
     """
@@ -636,7 +652,7 @@ class VariableDoc(APIDoc):
        only be defined if the containing namespace is a class    
        @type: C{bool}"""
     
-    overrides = UNKNOWN # [XXX] rename -- don't use a verb.
+    overrides = UNKNOWN  # [XXX] rename -- don't use a verb.
     """@ivar: The API documentation for the variable that is overridden by
        this variable.  This attribute should only be defined if the
        containing namespace is a class.
@@ -686,9 +702,9 @@ class VariableDoc(APIDoc):
         else:
             overrides = []
         if self.value in (None, UNKNOWN):
-            return []+overrides
+            return [] + overrides
         else:
-            return [self.value]+overrides
+            return [self.value] + overrides
 
     def is_detailed(self):
         pval = super(VariableDoc, self).is_detailed()
@@ -707,7 +723,7 @@ class VariableDoc(APIDoc):
             # the name & val.  Note that if any docwriter uses a
             # different formula for maxlen for this, then it will
             # not get the right value for is_detailed().
-            maxlen = self.value.SUMMARY_REPR_LINELEN-3-len(self.name)
+            maxlen = self.value.SUMMARY_REPR_LINELEN - 3 - len(self.name)
             return (not self.value.summary_pyval_repr(maxlen).is_complete)
         else:
             return self.value.is_detailed()
@@ -715,6 +731,7 @@ class VariableDoc(APIDoc):
 ######################################################################
 # Value Documentation Objects
 ######################################################################
+
 
 class ValueDoc(APIDoc):
     """
@@ -793,7 +810,7 @@ class ValueDoc(APIDoc):
     #} end of "context group"
 
     #{ Information about Imported Variables
-    proxy_for = None # [xx] in progress.
+    proxy_for = None  # [xx] in progress.
     """@ivar: If C{proxy_for} is not None, then this value was
        imported from another file.  C{proxy_for} is the dotted name of
        the variable that this value was imported from.  If that
@@ -898,6 +915,7 @@ class ValueDoc(APIDoc):
     def apidoc_links(self, **filters):
         return []
 
+
 class GenericValueDoc(ValueDoc):
     """
     API documentation about a 'generic' value, i.e., one that does not
@@ -909,6 +927,7 @@ class GenericValueDoc(ValueDoc):
     
     def is_detailed(self):
         return (not self.summary_pyval_repr().is_complete)
+
 
 class NamespaceDoc(ValueDoc):
     """
@@ -974,7 +993,7 @@ class NamespaceDoc(ValueDoc):
         imports = filters.get('imports', True)
         private = filters.get('private', True)
         if variables and imports and private:
-            return self.variables.values() # list the common case first.
+            return self.variables.values()  # list the common case first.
         elif not variables:
             return []
         elif not imports and not private:
@@ -1016,8 +1035,6 @@ class NamespaceDoc(ValueDoc):
                 if ident not in ['__all__', '__docformat__', '__path__']:
                     log.warning("@sort: %s.%s not found" %
                                 (self.canonical_name, ident))
-                    
-    
         # Add any remaining variables in alphabetical order.
         var_docs = unsorted.items()
         var_docs.sort()
@@ -1034,7 +1051,7 @@ class NamespaceDoc(ValueDoc):
         assert len(self.sorted_variables) == len(self.variables)
 
         elts = [(v.name, v) for v in self.sorted_variables]
-        self._unused_groups = dict([(n,set(i)) for (n,i) in self.group_specs])
+        self._unused_groups = dict([(n, set(i)) for (n, i) in self.group_specs])
         self.variable_groups = self._init_grouping(elts)
 
     def group_names(self):
@@ -1100,7 +1117,8 @@ class NamespaceDoc(ValueDoc):
             for ident in unused_idents:
                 log.warning("@group %s: %s.%s not found" %
                             (group, self.canonical_name, ident))
-                        
+    
+
 class ModuleDoc(NamespaceDoc):
     """
     API documentation information about a single module.
@@ -1162,7 +1180,7 @@ class ModuleDoc(NamespaceDoc):
         if self.submodules in (None, UNKNOWN):
             return
         self.submodules = sorted(self.submodules,
-                                 key=lambda m:m.canonical_name)
+                                 key=lambda m: m.canonical_name)
         elts = [(m.canonical_name[-1], m) for m in self.submodules]
         self.submodule_groups = self._init_grouping(elts)
 
@@ -1205,7 +1223,8 @@ class ModuleDoc(NamespaceDoc):
             raise ValueError('sorted_variables and variable_groups '
                              'must be initialized first.')
         
-        if group is None: var_list = self.sorted_variables
+        if group is None:
+            var_list = self.sorted_variables
         else:
             var_list = self.variable_groups.get(group, self.sorted_variables)
 
@@ -1244,6 +1263,7 @@ class ModuleDoc(NamespaceDoc):
         else:
             raise ValueError('Bad value type %r' % value_type)
 
+
 class ClassDoc(NamespaceDoc):
     """
     API documentation information about a single class.
@@ -1269,24 +1289,30 @@ class ClassDoc(NamespaceDoc):
         return val_docs
     
     def is_type(self):
-        if self.canonical_name == DottedName('type'): return True
-        if self.bases is UNKNOWN: return False
+        if self.canonical_name == DottedName('type'):
+            return True
+        if self.bases is UNKNOWN:
+            return False
         for base in self.bases:
             if isinstance(base, ClassDoc) and base.is_type():
                 return True
         return False
     
     def is_exception(self):
-        if self.canonical_name == DottedName('Exception'): return True
-        if self.bases is UNKNOWN: return False
+        if self.canonical_name == DottedName('Exception'):
+            return True
+        if self.bases is UNKNOWN:
+            return False
         for base in self.bases:
             if isinstance(base, ClassDoc) and base.is_exception():
                 return True
         return False
     
     def is_newstyle_class(self):
-        if self.canonical_name == DottedName('object'): return True
-        if self.bases is UNKNOWN: return False
+        if self.canonical_name == DottedName('object'):
+            return True
+        if self.bases is UNKNOWN:
+            return False
         for base in self.bases:
             if isinstance(base, ClassDoc) and base.is_newstyle_class():
                 return True
@@ -1299,7 +1325,8 @@ class ClassDoc(NamespaceDoc):
             return self._dfs_bases([], set(), warn_about_bad_bases)
                 
     def _dfs_bases(self, mro, seen, warn_about_bad_bases):
-        if self in seen: return mro
+        if self in seen:
+            return mro
         mro.append(self)
         seen.add(self)
         if self.bases is not UNKNOWN:
@@ -1321,7 +1348,7 @@ class ClassDoc(NamespaceDoc):
                 if (not isinstance(base, ClassDoc) or
                     base.proxy_for is not None):
                     self._report_bad_base(base)
-        w = [warn_about_bad_bases]*len(bases)
+        w = [warn_about_bad_bases] * len(bases)
         return self._c3_merge([[self]] + map(ClassDoc._c3_mro, bases, w) +
                               [list(bases)])
 
@@ -1345,17 +1372,22 @@ class ClassDoc(NamespaceDoc):
         """
         res = []
         while 1:
-          nonemptyseqs=[seq for seq in seqs if seq]
-          if not nonemptyseqs: return res
-          for seq in nonemptyseqs: # find merge candidates among seq heads
-              cand = seq[0]
-              nothead=[s for s in nonemptyseqs if cand in s[1:]]
-              if nothead: cand=None #reject candidate
-              else: break
-          if not cand: raise "Inconsistent hierarchy"
-          res.append(cand)
-          for seq in nonemptyseqs: # remove cand
-              if seq[0] == cand: del seq[0]
+            nonemptyseqs = [seq for seq in seqs if seq]
+            if not nonemptyseqs:
+                return res
+            for seq in nonemptyseqs:  # find merge candidates among seq heads
+                cand = seq[0]
+                nothead = [s for s in nonemptyseqs if cand in s[1:]]
+                if nothead:
+                    cand = None  # reject candidate
+                else:
+                    break
+            if not cand:
+                raise "Inconsistent hierarchy"
+            res.append(cand)
+            for seq in nonemptyseqs:  # remove cand
+                if seq[0] == cand:
+                    del seq[0]
     
     def select_variables(self, group=None, value_type=None, inherited=None,
                          public=None, imported=None, detailed=None):
@@ -1414,8 +1446,10 @@ class ClassDoc(NamespaceDoc):
             raise ValueError('sorted_variables and variable_groups '
                              'must be initialized first.')
         
-        if group is None: var_list = self.sorted_variables
-        else: var_list = self.variable_groups[group]
+        if group is None:
+            var_list = self.sorted_variables
+        else:
+            var_list = self.variable_groups[group]
 
         # Public/private filter (Count UNKNOWN as public)
         if public is True:
@@ -1424,11 +1458,12 @@ class ClassDoc(NamespaceDoc):
             var_list = [v for v in var_list if v.is_public is False]
 
         # Inherited filter (Count UNKNOWN as non-inherited)
-        if inherited is None: pass
+        if inherited is None:
+            pass
         elif inherited:
             var_list = [v for v in var_list if v.container != self]
         else:
-            var_list = [v for v in var_list if v.container == self ]
+            var_list = [v for v in var_list if v.container == self]
 
         # Imported filter (Count UNKNOWN as non-imported)
         if imported is True:
@@ -1481,6 +1516,7 @@ class ClassDoc(NamespaceDoc):
         else:
             raise ValueError('Bad value type %r' % value_type)
 
+
 class RoutineDoc(ValueDoc):
     """
     API documentation information about a single routine.
@@ -1508,7 +1544,7 @@ class RoutineDoc(ValueDoc):
     """@ivar: The name of the routine's keyword argument, or C{None} if
        it has no keyword argument.
        @type: C{string} or C{None}"""
-    lineno = UNKNOWN # used to look up profiling info from pstats.
+    lineno = UNKNOWN  # used to look up profiling info from pstats.
     """@ivar: The line number of the first line of the function's
        signature.  For Python functions, this is equal to
        C{func.func_code.co_firstlineno}.  The first line of a file
@@ -1576,8 +1612,8 @@ class RoutineDoc(ValueDoc):
             return True
 
         if (self.decorators not in (None, UNKNOWN)
-            and [ d for d in self.decorators
-                 if d not in ('classmethod', 'staticmethod') ]):
+            and [d for d in self.decorators
+                 if d not in ('classmethod', 'staticmethod')]):
             return True
 
         return False
@@ -1599,66 +1635,64 @@ class RoutineDoc(ValueDoc):
             all_args.append(self.kwarg)
         return all_args
 
+
 def _flatten(lst, out=None):
     """
     Return a flattened version of C{lst}.
     """
-    if out is None: out = []
+    if out is None:
+        out = []
     for elt in lst:
-        if isinstance(elt, (list,tuple)):
+        if isinstance(elt, (list, tuple)):
             _flatten(elt, out)
         else:
             out.append(elt)
     return out
 
-class ClassMethodDoc(RoutineDoc): pass
-class StaticMethodDoc(RoutineDoc): pass
+
+class ClassMethodDoc(RoutineDoc):
+    pass
+
+
+class StaticMethodDoc(RoutineDoc):
+    pass
+
 
 class PropertyDoc(ValueDoc):
     """
     API documentation information about a single property.
     """
-    #{ Property Access Functions
-    fget = UNKNOWN
-    """@ivar: API documentation for the property's get function.
-       @type: L{RoutineDoc}"""
-    fset = UNKNOWN
-    """@ivar: API documentation for the property's set function.
-       @type: L{RoutineDoc}"""
-    fdel = UNKNOWN
-    """@ivar: API documentation for the property's delete function.
-       @type: L{RoutineDoc}"""
-    #}
-    #{ Information Extracted from Docstrings
-    type_descr = UNKNOWN
-    """@ivar: A description of the property's expected type, extracted
-       from its docstring.
-       @type: L{ParsedDocstring<epydoc.markup.ParsedDocstring>}"""
-    #} end of "information extracted from docstrings" group
-
+    def __init__(self):
+        self.fget = UNKNOWN
+        self.fset = UNKNOWN
+        self.fdel = UNKNOWN
+        self.type_descr = UNKNOWN
+    
     def apidoc_links(self, **filters):
         val_docs = []
-        if self.fget not in (None, UNKNOWN): val_docs.append(self.fget)
-        if self.fset not in (None, UNKNOWN): val_docs.append(self.fset)
-        if self.fdel not in (None, UNKNOWN): val_docs.append(self.fdel)
+        if self.fget not in (None, UNKNOWN):
+            val_docs.append(self.fget)
+        if self.fset not in (None, UNKNOWN):
+            val_docs.append(self.fset)
+        if self.fdel not in (None, UNKNOWN):
+            val_docs.append(self.fdel)
         return val_docs
 
     def is_detailed(self):
         if super(PropertyDoc, self).is_detailed():
             return True
-
-        if self.fget not in (None, UNKNOWN) and self.fget.pyval is not None:
-             return True
-        if self.fset not in (None, UNKNOWN) and self.fset.pyval is not None:
-             return True
-        if self.fdel not in (None, UNKNOWN) and self.fdel.pyval is not None:
-             return True
-
+        if self.fget not in (None, UNKNOWN) and repr(self.fget) is not None:
+            return True
+        if self.fset not in (None, UNKNOWN) and repr(self.fset) is not None:
+            return True
+        if self.fdel not in (None, UNKNOWN) and repr(self.fdel) is not None:
+            return True
         return False
 
 ######################################################################
 ## Index
 ######################################################################
+
 
 class DocIndex:
     """
@@ -1731,7 +1765,7 @@ class DocIndex:
         #      be required anymore
         i = 1
         while i < len(self.root):
-            if self.root[i-1] is self.root[i]:
+            if self.root[i - 1] is self.root[i]:
                 del self.root[i]
             else:
                 i += 1
@@ -1807,7 +1841,8 @@ class DocIndex:
 
         # Check if the result is cached.
         val = self._get_cache.get(name)
-        if val is not None: return val
+        if val is not None:
+            return val
 
         # Look for an element in the root set whose name is a prefix
         # of `name`.  If we can't find one, then return None.
@@ -1818,7 +1853,8 @@ class DocIndex:
                 var_doc = None
                 val_doc = root_valdoc
                 for identifier in name[len(root_valdoc.canonical_name):]:
-                    if val_doc is None: break
+                    if val_doc is None:
+                        break
                     var_doc, val_doc = self._get_from(val_doc, identifier)
                 else:
                     # If we found it, then return.
@@ -1835,7 +1871,8 @@ class DocIndex:
             child_var = val_doc.variables.get(identifier)
             if child_var is not None:
                 child_val = child_var.value
-                if child_val is UNKNOWN: child_val = None
+                if child_val is UNKNOWN:
+                    child_val = None
                 return child_var, child_val
 
         # If that fails, then see if it's a submodule.
@@ -1845,7 +1882,8 @@ class DocIndex:
                 if submodule.canonical_name[-1] == identifier:
                     var_doc = None
                     val_doc = submodule
-                    if val_doc is UNKNOWN: val_doc = None
+                    if val_doc is UNKNOWN:
+                        val_doc = None
                     return var_doc, val_doc
 
         return None, None
@@ -1883,7 +1921,7 @@ class DocIndex:
         # Check for the name in all containing namespaces, starting
         # with the closest one.
         for i in range(len(container_name), -1, -1):
-            relative_name = container_name[:i]+name
+            relative_name = container_name[:i] + name
             # Is `name` the absolute name of a documented value?
             # (excepting GenericValueDoc values.)
             val_doc = self.get_valdoc(relative_name)
@@ -1892,16 +1930,18 @@ class DocIndex:
                 return val_doc
             # Is `name` the absolute name of a documented variable?
             var_doc = self.get_vardoc(relative_name)
-            if var_doc is not None: return var_doc
+            if var_doc is not None:
+                return var_doc
 
         # If the name begins with 'self', then try stripping that off
         # and see if we can find the variable.
         if name[0] == 'self':
             doc = self.find('.'.join(name[1:]), context)
-            if doc is not None: return doc
+            if doc is not None:
+                return doc
 
         # Is it the name of a builtin?
-        if len(name)==1 and hasattr(__builtin__, name[0]):
+        if len(name) == 1 and hasattr(__builtin__, name[0]):
             return None
         
         # Is it a parameter's name or an attribute of a parameter?
@@ -1917,7 +1957,7 @@ class DocIndex:
         elif isinstance(doc, list):
             log.warning("%s is an ambiguous name: it may be %s" % (
                 name[-1],
-                ", ".join([ "'%s'" % d.canonical_name for d in doc ])))
+                ", ".join(["'%s'" % d.canonical_name for d in doc])))
 
             # Drop this item so that the warning is reported only once.
             # fail() will fail anyway.
@@ -1957,7 +1997,7 @@ class DocIndex:
                 if vals is None:
                     classes[name] = val
                 elif not isinstance(vals, list):
-                    classes[name] = [ vals, val ]
+                    classes[name] = [vals, val]
                 else:
                     vals.append(val)
 
@@ -1987,11 +2027,11 @@ class DocIndex:
         """
         # Check if the result is cached.
         val = self._container_cache.get(api_doc)
-        if val is not None: return val
-        
+        if val is not None:
+            return val
         if isinstance(api_doc, GenericValueDoc):
             self._container_cache[api_doc] = None
-            return None # [xx] unknown.
+            return None  # [xx] unknown.
         if isinstance(api_doc, VariableDoc):
             self._container_cache[api_doc] = api_doc.container
             return api_doc.container
@@ -2018,8 +2058,10 @@ class DocIndex:
         @warning: This method uses undocumented data structures inside
             of C{profile_stats}.
         """
-        if self.callers is None: self.callers = {}
-        if self.callees is None: self.callees = {}
+        if self.callers is None:
+            self.callers = {}
+        if self.callees is None:
+            self.callees = {}
         
         # The Stat object encodes functions using `funcid`s, or
         # tuples of (filename, lineno, funcname).  Create a mapping
@@ -2028,10 +2070,12 @@ class DocIndex:
         
         for callee, (cc, nc, tt, ct, callers) in profile_stats.stats.items():
             callee = self._funcid_to_doc.get(callee)
-            if callee is None: continue
+            if callee is None:
+                continue
             for caller in callers:
                 caller = self._funcid_to_doc.get(caller)
-                if caller is None: continue
+                if caller is None:
+                    continue
                 self.callers.setdefault(callee, []).append(caller)
                 self.callees.setdefault(caller, []).append(callee)
 
@@ -2044,14 +2088,18 @@ class DocIndex:
         # Maps (filename, lineno, funcname) -> RoutineDoc
         for val_doc in self.reachable_valdocs():
             # We only care about routines.
-            if not isinstance(val_doc, RoutineDoc): continue
+            if not isinstance(val_doc, RoutineDoc):
+                continue
             # Get the filename from the defining module.
             module = val_doc.defining_module
-            if module is UNKNOWN or module.filename is UNKNOWN: continue
+            if module is UNKNOWN or module.filename is UNKNOWN:
+                continue
             # Normalize the filename.
             filename = os.path.abspath(module.filename)
-            try: filename = py_src_filename(filename)
-            except: pass
+            try:
+                filename = py_src_filename(filename)
+            except:
+                pass
             # Look up the stat_func_id
             funcid = (filename, val_doc.lineno, val_doc.canonical_name[-1])
             if funcid in profile_stats.stats:
@@ -2060,6 +2108,7 @@ class DocIndex:
 ######################################################################
 ## Pretty Printing
 ######################################################################
+
 
 def pp_apidoc(api_doc, doublespace=0, depth=5, exclude=(), include=(),
               backpointers=None):
@@ -2076,7 +2125,8 @@ def pp_apidoc(api_doc, doublespace=0, depth=5, exclude=(), include=(),
     @param backpointers: For internal use.
     """
     pyid = id(api_doc.__dict__)
-    if backpointers is None: backpointers = {}
+    if backpointers is None:
+        backpointers = {}
     if (hasattr(api_doc, 'canonical_name') and
         api_doc.canonical_name not in (None, UNKNOWN)):
         name = '%s for %s' % (api_doc.__class__.__name__,
@@ -2085,8 +2135,8 @@ def pp_apidoc(api_doc, doublespace=0, depth=5, exclude=(), include=(),
         if (getattr(api_doc, 'container', None) not in (UNKNOWN, None) and
             getattr(api_doc.container, 'canonical_name', None)
             not in (UNKNOWN, None)):
-            name ='%s for %s' % (api_doc.__class__.__name__,
-                                 api_doc.container.canonical_name+
+            name = '%s for %s' % (api_doc.__class__.__name__,
+                                 api_doc.container.canonical_name +
                                  api_doc.name)
         else:
             name = '%s for %s' % (api_doc.__class__.__name__, api_doc.name)
@@ -2121,17 +2171,18 @@ def pp_apidoc(api_doc, doublespace=0, depth=5, exclude=(), include=(),
     
     for field in fields:
         fieldval = getattr(api_doc, field)
-        if doublespace: s += '\n |'
+        if doublespace:
+            s += '\n |'
         s += '\n +- %s' % field
 
         if (isinstance(fieldval, types.ListType) and
-            len(fieldval)>0 and
+            len(fieldval) > 0 and
             isinstance(fieldval[0], APIDoc)):
             s += _pp_list(api_doc, fieldval, doublespace, depth,
                           exclude, include, backpointers,
                           (field is fields[-1]))
         elif (isinstance(fieldval, types.DictType) and
-              len(fieldval)>0 and 
+              len(fieldval) > 0 and 
               isinstance(fieldval.values()[0], APIDoc)):
             s += _pp_dict(api_doc, fieldval, doublespace, 
                           depth, exclude, include, backpointers,
@@ -2143,8 +2194,8 @@ def pp_apidoc(api_doc, doublespace=0, depth=5, exclude=(), include=(),
         else:
             s += ' = ' + _pp_val(api_doc, fieldval, doublespace,
                                  depth, exclude, include, backpointers)
-                
     return s
+
 
 def _pp_list(api_doc, items, doublespace, depth, exclude, include,
               backpointers, is_last):
@@ -2153,12 +2204,14 @@ def _pp_list(api_doc, items, doublespace, depth, exclude, include,
     for item in items:
         line2 = ((item is items[-1]) and ' ') or '|'
         joiner = '\n %s  %s ' % (line1, line2)
-        if doublespace: s += '\n %s  |' % line1
+        if doublespace:
+            s += '\n %s  |' % line1
         s += '\n %s  +- ' % line1
         valstr = _pp_val(api_doc, item, doublespace, depth, exclude, include,
                          backpointers)
         s += joiner.join(valstr.split('\n'))
     return s
+
 
 def _pp_dict(api_doc, dict, doublespace, depth, exclude, include,
               backpointers, is_last):
@@ -2169,35 +2222,43 @@ def _pp_dict(api_doc, dict, doublespace, depth, exclude, include,
     for item in items:
         line2 = ((item is items[-1]) and ' ') or '|'
         joiner = '\n %s  %s ' % (line1, line2)
-        if doublespace: s += '\n %s  |' % line1
+        if doublespace:
+            s += '\n %s  |' % line1
         s += '\n %s  +- ' % line1
         valstr = _pp_val(api_doc, item[1], doublespace, depth, exclude,
                          include, backpointers)
         s += joiner.join(('%s => %s' % (item[0], valstr)).split('\n'))
     return s
 
+
 def _pp_apidoc(api_doc, val, doublespace, depth, exclude, include,
                 backpointers, is_last):
     line1 = (is_last and ' ') or '|'
     s = ''
-    if doublespace: s += '\n %s  |  ' % line1
+    if doublespace:
+        s += '\n %s  |  ' % line1
     s += '\n %s  +- ' % line1
     joiner = '\n %s    ' % line1
-    childstr = pp_apidoc(val, doublespace, depth-1, exclude,
+    childstr = pp_apidoc(val, doublespace, depth - 1, exclude,
                          include, backpointers)
     return s + joiner.join(childstr.split('\n'))
     
+
 def _pp_val(api_doc, val, doublespace, depth, exclude, include, backpointers):
     from epydoc import markup
     if isinstance(val, APIDoc):
-        return pp_apidoc(val, doublespace, depth-1, exclude,
+        return pp_apidoc(val, doublespace, depth - 1, exclude,
                          include, backpointers)
     elif isinstance(val, markup.ParsedDocstring):
-        valrepr = `val.to_plaintext(None)`
-        if len(valrepr) < 40: return valrepr
-        else: return valrepr[:37]+'...'
+        valrepr = repr(val.to_plaintext(None))
+        if len(valrepr) < 40:
+            return valrepr
+        else:
+            return valrepr[:37] + '...'
     else:
         valrepr = repr(val)
-        if len(valrepr) < 40: return valrepr
-        else: return valrepr[:37]+'...'
+        if len(valrepr) < 40:
+            return valrepr
+        else:
+            return valrepr[:37] + '...'
 
